@@ -1,0 +1,7 @@
+domain: secretsreload.test
+repo: example
+resources:
+- group: seceretreload
+  kind: SQSsecrets
+  version: v1
+version: "2"
