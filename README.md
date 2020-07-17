@@ -1,0 +1,1 @@
+# AWS_Secret_manager_rotation_operator
