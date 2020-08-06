@@ -30,7 +30,7 @@ This project helps users to automatically redeploy the pods running on Amazon EK
 
 5. Clone the project into go project path -   
 ```
-cd go/src && git clone https://github.com/Mahendrasiddappa/AWS_Secret_manager_rotation_operator.git && cd AWS_Secret_manager_rotation_operator
+cd ~/go/src && git clone https://github.com/Mahendrasiddappa/AWS_Secret_manager_rotation_operator.git && cd AWS_Secret_manager_rotation_operator
 ```
 
 6. Set Environment variables - 
