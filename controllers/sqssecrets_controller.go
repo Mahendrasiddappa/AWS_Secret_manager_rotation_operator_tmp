@@ -66,19 +66,10 @@ func (r *SQSsecretsReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	fmt.Println("NamespacedName", req.NamespacedName)
-	fmt.Println("===========================")
-	fmt.Println("===========================")
-	fmt.Println("Reconciler started")
-	fmt.Println("===========================")
-	fmt.Println("===========================")
-
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(r.Region)},
 	)
 	svc := sqs.New(sess)
-
-	//log.Info("created SQS session")
 
 	//read message from SQS
 	message, err := svc.ReceiveMessage(&sqs.ReceiveMessageInput{
@@ -96,11 +87,6 @@ func (r *SQSsecretsReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	fmt.Println("SQS messages:", message.Messages)
 	//loop through all the messages retrived from SQS
 	for _, element := range message.Messages {
-		fmt.Println("===========================")
-		fmt.Println("===========================")
-		fmt.Println("loop started")
-		fmt.Println("===========================")
-		fmt.Println("===========================")
 		err := json.Unmarshal([]byte(*element.Body), &result)
 		if err != nil {
 			fmt.Println("Error", err)
@@ -108,10 +94,6 @@ func (r *SQSsecretsReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 
 		detail := result["detail"].(map[string]interface{})
 		eventName := detail["eventName"]
-		fmt.Println("SQS Event Name", eventName)
-		//requestParameters := detail["requestParameters"].(map[string]interface{})
-		//requestParameters := detail["additionalEventData"].(map[string]interface{})
-		//secretID := requestParameters["secretId"]
 
 		// continue only if the event type is PutSecretValue
 		if eventName == "PutSecretValue" {
@@ -119,11 +101,6 @@ func (r *SQSsecretsReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 			secretID := requestParameters["secretId"]
 			fmt.Println("Secret ID rotated", secretID)
 
-			//read the CRD SQSsecrets to get the secert name to deployment mapping
-
-			//fmt.Println("fetched SQS CRD:", SQSSecret)
-			//fmt.Println("SQS CRD DeploymentNames:", SQSSecret.Spec.DeploymentNames)
-			fmt.Println("SQS CRD secret ID:", SQSSecret.Spec.SecretID, secretID)
 			//if the secretID in SQS message is not same as the secret in CRD, continue with next message
 			if secretID != SQSSecret.Spec.SecretID {
 				fmt.Println("continuing to next loop")
@@ -149,9 +126,6 @@ func (r *SQSsecretsReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 			}
 		}
 
-		// Add SQS message to delete message queue
-		//s := string(num)
-		//fmt.Println("Iteration number:", num)
 		deleteMessage := sqs.DeleteMessageBatchRequestEntry{Id: element.MessageId, ReceiptHandle: element.ReceiptHandle}
 		DeleteMessageBatchList = append(DeleteMessageBatchList, &deleteMessage)
 	}
