@@ -15,7 +15,7 @@ AWS_DEFAULT_REGION -  Region in which the resources exist
 5. Install CRD - make install
 Start the controller - make run 
 
-6. 
+6. Create CRD and deployment in multiple namespaces for testing -
 * Scenario 1:-
 Create CRD in default namespace -
 kubectl create -f config/samples/seceretreload_v1_sqssecrets.yaml
