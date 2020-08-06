@@ -9,9 +9,9 @@ This project helps users to automatically redeploy the pods running on Amazon EK
 3. Clone the project into go project path - cd go/src && git clone https://github.com/Mahendrasiddappa/AWS_Secret_manager_rotation_operator.git && cd AWS_Secret_manager_rotation_operator
 
 4. Set Environment variables - 
-SECRETS_ROTATE_AFTER - Default is 5 seconds, can be configured in seconds
-SECRETS_SQS_QUEUE_URL - no default, pass the SQS queue URL not ARN
-AWS_DEFAULT_REGION -  Region in which the resources exist
+* SECRETS_ROTATE_AFTER - Default is 5 seconds, can be configured in seconds
+* SECRETS_SQS_QUEUE_URL - no default, pass the SQS queue URL not ARN
+* AWS_DEFAULT_REGION -  Region in which the resources exist
 
 5. Install CRD - make install
 Start the controller - make run 
