@@ -6,21 +6,43 @@ This project helps users to automatically redeploy the pods running on Amazon EK
 
 2. Install kubebuilder - https://book.kubebuilder.io/quick-start.html#installation
 
-3. Clone the project into go project path -   
+3. Create a standard SQS queue
+
+4. Create a AWS Event bridge rule to send PutSecretValue event to SQS queue with following event pattern - 
+```
+{
+  "source": [
+    "aws.secretsmanager"
+  ],
+  "detail-type": [
+    "AWS API Call via CloudTrail"
+  ],
+  "detail": {
+    "eventSource": [
+      "secretsmanager.amazonaws.com"
+    ],
+    "eventName": [
+      "PutSecretValue"
+    ]
+  }
+}
+```
+
+5. Clone the project into go project path -   
 ```cd go/src && git clone https://github.com/Mahendrasiddappa/AWS_Secret_manager_rotation_operator.git && cd AWS_Secret_manager_rotation_operator```
 
-4. Set Environment variables - 
+6. Set Environment variables - 
 * SECRETS_ROTATE_AFTER - Default is 5 seconds, can be configured in seconds
 * SECRETS_SQS_QUEUE_URL - no default, pass the SQS queue URL not ARN
-* AWS_DEFAULT_REGION -  Region in which the resources exist
+* AWS_DEFAULT_REGION -  no default, Region in which the resources exist
 
-5. Install CRD -   
+7. Install CRD -   
 ```make install```
 
-6. Start the controller -   
+8. Start the controller -   
 ```make run ```
 
-7. Create CRD and deployment in multiple namespaces for testing -
+9. Create CRD and deployment in multiple namespaces for testing -
 * Scenario 1:-
 Create CRD in default namespace -
 ```kubectl create -f config/samples/seceretreload_v1_sqssecrets.yaml```. 
@@ -32,7 +54,7 @@ CReate CRD in namespace testoperator -
 ```kubectl create ns testoperator && kubectl create -f config/samples/seceretreload_v1_sqssecrets_operator_ns.yaml```. 
 there will be no deployment called nginx in this namespace, so controller will try to find deployment name specified in CRD and fails to patch, and moves on
 
-8. Create PutSecretValue event -
+10. Create PutSecretValue event -
 ```aws secretsmanager put-secret-value --secret-id sqssecret --secret-string [{testsqssec:newsecret}]```. 
 
 ## Result - 
