@@ -14,9 +14,10 @@ This project helps users to automatically redeploy the pods running on Amazon EK
 * AWS_DEFAULT_REGION -  Region in which the resources exist
 
 5. Install CRD - make install
-Start the controller - make run 
 
-6. Create CRD and deployment in multiple namespaces for testing -
+6. Start the controller - make run 
+
+7. Create CRD and deployment in multiple namespaces for testing -
 * Scenario 1:-
 Create CRD in default namespace -
 kubectl create -f config/samples/seceretreload_v1_sqssecrets.yaml
@@ -27,7 +28,7 @@ CReate CRD in namespace testoperator -
 kubectl create ns testoperator && kubectl create -f config/samples/seceretreload_v1_sqssecrets_operator_ns.yaml
 there will be no deployment called nginx in this namespace, so controller will try to find deployment name specified in CRD and fails to patch, and moves on
 
-7. Create PutSecretValue event -
+8. Create PutSecretValue event -
 aws secretsmanager put-secret-value --secret-id sqssecret --secret-string [{testsqssec:newsecret}]
 
 ## Result - 
