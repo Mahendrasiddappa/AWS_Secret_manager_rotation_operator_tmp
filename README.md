@@ -23,14 +23,13 @@ This project helps users to automatically redeploy the pods running on Amazon EK
 7. Create CRD and deployment in multiple namespaces for testing -
 * Scenario 1:-
 Create CRD in default namespace -
-```kubectl create -f config/samples/seceretreload_v1_sqssecrets.yaml
-create deployment named nginx - kubectl run nginx --image=nginx```
+```kubectl create -f config/samples/seceretreload_v1_sqssecrets.yaml```
+create deployment named nginx - 
+```kubectl run nginx --image=nginx```
 
 * Scenario 2:-
 CReate CRD in namespace testoperator -
-
 ```kubectl create ns testoperator && kubectl create -f config/samples/seceretreload_v1_sqssecrets_operator_ns.yaml```
-
 there will be no deployment called nginx in this namespace, so controller will try to find deployment name specified in CRD and fails to patch, and moves on
 
 8. Create PutSecretValue event -
