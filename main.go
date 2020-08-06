@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -79,11 +80,28 @@ func main() {
 		RequeueAfter = time.Duration(temp)
 	}
 
+	//Read the SQS queue name vaule from environment variable
+	secret_sqs_queue := os.Getenv("SECRETS_SQS_QUEUE_URL")
+	if secret_sqs_queue == "" {
+		setupLog.Error(err, "please set the SQS queue URL in environment variable SECRETS_SQS_QUEUE_URL")
+		os.Exit(1)
+	}
+
+	//Read region vaule from environment variable
+	region := os.Getenv("AWS_DEFAULT_REGION")
+	if region == "" {
+		setupLog.Error(err, "please set region in environment variable AWS_DEFAULT_REGION")
+		os.Exit(1)
+	}
+
+	fmt.Println("secret_sqs_queue:", secret_sqs_queue)
 	if err = (&controllers.SQSsecretsReconciler{
 		Client:       mgr.GetClient(),
 		Log:          ctrl.Log.WithName("controllers").WithName("SQSsecrets"),
 		Scheme:       mgr.GetScheme(),
 		RequeueAfter: RequeueAfter,
+		QueueUrl:     secret_sqs_queue,
+		Region:       region,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SQSsecrets")
 		os.Exit(1)

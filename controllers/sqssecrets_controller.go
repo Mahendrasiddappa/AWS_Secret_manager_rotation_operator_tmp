@@ -42,6 +42,8 @@ type SQSsecretsReconciler struct {
 	Log          logr.Logger
 	Scheme       *runtime.Scheme
 	RequeueAfter time.Duration
+	QueueUrl     string
+	Region       string
 }
 
 type messageBody struct {
@@ -54,75 +56,79 @@ type messageBody struct {
 
 func (r *SQSsecretsReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	log := r.Log.WithValues("sqssecrets", req.NamespacedName, "at", req.Name)
+	//log := r.Log.WithValues("sqssecrets", req.NamespacedName, "at", req.Name)
+
+	var DeleteMessageBatchList []*sqs.DeleteMessageBatchRequestEntry
+	var SQSSecret seceretreloadv1.SQSsecrets
+	var result map[string]interface{}
+
+	if err := r.Get(ctx, req.NamespacedName, &SQSSecret); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	fmt.Println("NamespacedName", req.NamespacedName)
+	fmt.Println("===========================")
+	fmt.Println("===========================")
+	fmt.Println("Reconciler started")
+	fmt.Println("===========================")
+	fmt.Println("===========================")
 
 	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String("us-east-1")},
+		Region: aws.String(r.Region)},
 	)
 	svc := sqs.New(sess)
 
-	log.Info("created SQS session")
-	result, err := svc.GetQueueUrl(&sqs.GetQueueUrlInput{
-		QueueName: aws.String("casc"),
-	})
-
-	log.Info("got SQS queue")
-	if err != nil {
-		log.Info("SQS error")
-		log.WithValues("Error", err)
-		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
-	}
-	log.Info("got SQS queue with no error")
-	fmt.Println("Success", *result.QueueUrl)
+	//log.Info("created SQS session")
 
 	//read message from SQS
 	message, err := svc.ReceiveMessage(&sqs.ReceiveMessageInput{
-		AttributeNames: []*string{
-			aws.String(sqs.MessageSystemAttributeNameSentTimestamp),
-		},
-		MessageAttributeNames: []*string{
-			aws.String(sqs.QueueAttributeNameAll),
-		},
-		QueueUrl:            result.QueueUrl,
-		MaxNumberOfMessages: aws.Int64(1),
-		VisibilityTimeout:   aws.Int64(20), // 20 seconds
+		QueueUrl:            &r.QueueUrl,
+		MaxNumberOfMessages: aws.Int64(10),
+		VisibilityTimeout:   aws.Int64(20),
 		WaitTimeSeconds:     aws.Int64(0),
 	})
 
 	if err != nil {
 		fmt.Println("Error", err)
-		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+		return ctrl.Result{RequeueAfter: time.Second * r.RequeueAfter}, nil
 	}
 
+	fmt.Println("SQS messages:", message.Messages)
 	//loop through all the messages retrived from SQS
 	for _, element := range message.Messages {
-		//fmt.Println("SQS message:", *element.Body)
-		var result map[string]interface{}
-
-		// Unmarshall SQS message from string JSON to map
+		fmt.Println("===========================")
+		fmt.Println("===========================")
+		fmt.Println("loop started")
+		fmt.Println("===========================")
+		fmt.Println("===========================")
 		err := json.Unmarshal([]byte(*element.Body), &result)
-
 		if err != nil {
 			fmt.Println("Error", err)
 		}
 
 		detail := result["detail"].(map[string]interface{})
-		requestParameters := detail["requestParameters"].(map[string]interface{})
 		eventName := detail["eventName"]
-		secretID := requestParameters["secretId"]
-
 		fmt.Println("SQS Event Name", eventName)
-		fmt.Println("SQS secret ID", secretID)
-		// continue inly if the event type is PutSecretValue
+		//requestParameters := detail["requestParameters"].(map[string]interface{})
+		//requestParameters := detail["additionalEventData"].(map[string]interface{})
+		//secretID := requestParameters["secretId"]
+
+		// continue only if the event type is PutSecretValue
 		if eventName == "PutSecretValue" {
+			requestParameters := detail["requestParameters"].(map[string]interface{})
+			secretID := requestParameters["secretId"]
+			fmt.Println("Secret ID rotated", secretID)
+
 			//read the CRD SQSsecrets to get the secert name to deployment mapping
-			var SQSSecret seceretreloadv1.SQSsecrets
-			if err := r.Get(ctx, req.NamespacedName, &SQSSecret); err != nil {
-				return ctrl.Result{}, client.IgnoreNotFound(err)
+
+			//fmt.Println("fetched SQS CRD:", SQSSecret)
+			//fmt.Println("SQS CRD DeploymentNames:", SQSSecret.Spec.DeploymentNames)
+			fmt.Println("SQS CRD secret ID:", SQSSecret.Spec.SecretID, secretID)
+			//if the secretID in SQS message is not same as the secret in CRD, continue with next message
+			if secretID != SQSSecret.Spec.SecretID {
+				fmt.Println("continuing to next loop")
+				continue
 			}
-			fmt.Println("fetched SQS CRD:", SQSSecret)
-			fmt.Println("SQS CRD DeploymentNames:", SQSSecret.Spec.DeploymentNames)
-			fmt.Println("SQS CRD secret ID:", SQSSecret.Spec.SecretID)
 
 			//get the deployment specified in the crd SQSsecrets
 			var deploy v1.Deployment
@@ -131,18 +137,33 @@ func (r *SQSsecretsReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 				deployName := client.ObjectKey{Name: deployment, Namespace: req.Namespace}
 				if err := r.Get(ctx, deployName, &deploy); err != nil {
 					fmt.Println("Get deployment err:", err)
-					return ctrl.Result{}, client.IgnoreNotFound(err)
+					return ctrl.Result{RequeueAfter: time.Second * r.RequeueAfter}, nil
 				}
 
 				// Patch the deployment with new label containing redeployed timestamp, to force redeploy
 				patch := []byte(fmt.Sprintf(`{"spec":{"template":{"metadata":{"labels":{"aws-secrets-controller-redeloyed":"%v"}}}}}`, time.Now().Unix()))
 				if err := r.Patch(ctx, &deploy, client.RawPatch(types.StrategicMergePatchType, patch)); err != nil {
 					fmt.Println("Patch deployment err:", err)
+					return ctrl.Result{RequeueAfter: time.Second * r.RequeueAfter}, nil
 				}
 			}
 		}
+
+		// Add SQS message to delete message queue
+		//s := string(num)
+		//fmt.Println("Iteration number:", num)
+		deleteMessage := sqs.DeleteMessageBatchRequestEntry{Id: element.MessageId, ReceiptHandle: element.ReceiptHandle}
+		DeleteMessageBatchList = append(DeleteMessageBatchList, &deleteMessage)
 	}
 
+	//DeleteMessageBatch
+	fmt.Println("DeleteMessageBatchList:", DeleteMessageBatchList)
+	DeleteMessageBatchInput := &sqs.DeleteMessageBatchInput{Entries: DeleteMessageBatchList, QueueUrl: &r.QueueUrl}
+	DeleteMessageBatchOutput, err := svc.DeleteMessageBatch(DeleteMessageBatchInput)
+	if err != nil {
+		fmt.Println("DeleteMessageBatchList error:", err)
+	}
+	fmt.Println("DeleteMessageBatchList output:", DeleteMessageBatchOutput)
 	return ctrl.Result{RequeueAfter: time.Second * r.RequeueAfter}, nil
 }
 
