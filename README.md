@@ -52,6 +52,7 @@ create deployment named nginx -
 * Scenario 2:-
 CReate CRD in namespace testoperator -  
 ```kubectl create ns testoperator && kubectl create -f config/samples/seceretreload_v1_sqssecrets_operator_ns.yaml```. 
+
 there will be no deployment called nginx in this namespace, so controller will try to find deployment name specified in CRD and fails to patch, and moves on
 
 10. Create PutSecretValue event -
