@@ -29,7 +29,9 @@ This project helps users to automatically redeploy the pods running on Amazon EK
 ```
 
 5. Clone the project into go project path -   
-```cd go/src && git clone https://github.com/Mahendrasiddappa/AWS_Secret_manager_rotation_operator.git && cd AWS_Secret_manager_rotation_operator```
+```
+cd go/src && git clone https://github.com/Mahendrasiddappa/AWS_Secret_manager_rotation_operator.git && cd AWS_Secret_manager_rotation_operator
+```
 
 6. Set Environment variables - 
 * SECRETS_ROTATE_AFTER - Default is 5 seconds, can be configured in seconds
@@ -37,27 +39,39 @@ This project helps users to automatically redeploy the pods running on Amazon EK
 * AWS_DEFAULT_REGION -  no default, Region in which the resources exist
 
 7. Install CRD -   
-```make install```
+```
+make install
+```
 
 8. Start the controller -   
-```make run ```
+```
+make run
+ ```
 
 9. Create CRD and deployment in multiple namespaces for testing -
 * Scenario 1:-
-Create CRD in default namespace -
-```kubectl create -f config/samples/seceretreload_v1_sqssecrets.yaml```. 
+  Create CRD in default namespace -
+  ```
+  kubectl create -f config/samples/seceretreload_v1_sqssecrets.yaml
+  ```
 
-create deployment named nginx -   
-```kubectl run nginx --image=nginx```
+  create deployment named nginx -   
+  ```
+  kubectl run nginx --image=nginx
+  ```
 
 * Scenario 2:-
-CReate CRD in namespace testoperator -  
-```kubectl create ns testoperator && kubectl create -f config/samples/seceretreload_v1_sqssecrets_operator_ns.yaml```. 
+  Create CRD in namespace testoperator -  
+  ```
+  kubectl create ns testoperator && kubectl create -f config/samples/seceretreload_v1_sqssecrets_operator_ns.yaml
+  ```
 
-there will be no deployment called nginx in this namespace, so controller will try to find deployment name specified in CRD and fails to patch, and moves on
+  there will be no deployment called nginx in this namespace, so controller will try to find deployment name specified in CRD and fails to patch, and moves on
 
 10. Create PutSecretValue event -
-```aws secretsmanager put-secret-value --secret-id sqssecret --secret-string [{testsqssec:newsecret}]```. 
+```
+aws secretsmanager put-secret-value --secret-id sqssecret --secret-string [{testsqssec:newsecret}]
+```
 
 ## Result - 
 The nginx pod in default namespace should be restarted
