@@ -46,6 +46,7 @@ This project helps users to automatically redeploy the pods running on Amazon EK
 * Scenario 1:-
 Create CRD in default namespace -
 ```kubectl create -f config/samples/seceretreload_v1_sqssecrets.yaml```. 
+
 create deployment named nginx -   
 ```kubectl run nginx --image=nginx```
 
