@@ -13,6 +13,9 @@ endif
 
 all: manager
 
+aws:
+	aws cloudformation create-stack --stack-name EKS-Secrets-Operator-Stack --template-body file://cfn.yaml    
+
 # Run tests
 test: generate fmt vet manifests
 	go test ./... -coverprofile cover.out
@@ -28,6 +31,8 @@ run: generate fmt vet manifests
 # Install CRDs into a cluster
 install: manifests
 	kustomize build config/crd | kubectl apply -f -
+	
+	
 
 # Uninstall CRDs from a cluster
 uninstall: manifests

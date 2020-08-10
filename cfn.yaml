@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Provision eventbridge / SQS to connect with EKS controller
+Metadata:
+  License: >-
+    Any code, applications, scripts, templates, proofs of concept, documentation
+    and other items provided by AWS under this SOW are "AWS Content," as defined
+    in the Agreement, and are provided for illustration purposes only. All such
+    AWS Content is provided solely at the option of AWS, and is subject to the
+    terms of the Addendum and the Agreement. Customer is solely responsible for
+    using, deploying, testing, and supporting any code and applications provided
+    by AWS under this SOW.
+
+Resources:
+
+  ControllerListenerSqs:
+    Type: AWS::SQS::Queue
+    Properties: 
+      QueueName: eks-controller-sqs
+      Tags:
+        -
+          Key: AppName
+          Value: eks-controller
+ 
+  ControllerListenerSqsPolicy: 
+    Type: AWS::SQS::QueuePolicy
+    Properties: 
+      Queues: 
+        - !Ref ControllerListenerSqs
+      PolicyDocument: 
+        Statement: 
+          - 
+            Action: 
+              - "SQS:SendMessage" 
+            Effect: "Allow"
+            Resource: !GetAtt ControllerListenerSqs.Arn
+            Principal:
+              Service: 
+                - "events.amazonaws.com"
+                - "sqs.amazonaws.com"   
+
+  EventbridgeRule: 
+    Type: AWS::Events::Rule
+    Properties: 
+      Name: eks-controller-events-rule
+      Description: Cloudwatch rule to trigger the SQS queue which listens on secret change events
+      EventPattern: { "source": [ "aws.secretsmanager" ], "detail-type": [ "AWS API Call via CloudTrail" ], "detail": { "eventSource": [ "secretsmanager.amazonaws.com" ], "eventName": [ "PutSecretValue" ] } }
+      State: "ENABLED"
+      Targets: 
+        - 
+          Arn: !GetAtt ControllerListenerSqs.Arn
+          Id: "SQStrigger"
+
+Outputs: 
+
+  QueueURL: 
+    Description: "URL of source queue"
+    Value: !Ref ControllerListenerSqs
+
+  QueueARN: 
+    Description: "ARN of source queue"
+    Value: !GetAtt ControllerListenerSqs.Arn

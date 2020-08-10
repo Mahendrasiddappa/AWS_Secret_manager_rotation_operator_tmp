@@ -6,49 +6,32 @@ This project helps users to automatically redeploy the pods running on Amazon EK
 
 2. Install kubebuilder - https://book.kubebuilder.io/quick-start.html#installation
 
-3. Create a standard SQS queue
-
-4. Create a AWS Event bridge rule to send PutSecretValue event to SQS queue with following event pattern - 
+3. We need a SQS queue and AWS EventBridge rule, which will store the event details of the PutSecretValue API call, so that the Secrets controller can get the secret rotation details. There is a CloudFormation template included in this project which will create a sample secret, EventBridge rule and SQS queue for the test. Run the below command -
 ```
-{
-  "source": [
-    "aws.secretsmanager"
-  ],
-  "detail-type": [
-    "AWS API Call via CloudTrail"
-  ],
-  "detail": {
-    "eventSource": [
-      "secretsmanager.amazonaws.com"
-    ],
-    "eventName": [
-      "PutSecretValue"
-    ]
-  }
-}
+make aws
 ```
 
-5. Clone the project into go project path -   
+4. Clone the project into go project path -   
 ```
 cd ~/go/src && git clone https://github.com/Mahendrasiddappa/AWS_Secret_manager_rotation_operator.git && cd AWS_Secret_manager_rotation_operator
 ```
 
-6. Set Environment variables - 
+5. Set Environment variables - 
 * SECRETS_ROTATE_AFTER - Default is 5 seconds, can be configured in seconds
 * SECRETS_SQS_QUEUE_URL - no default, pass the SQS queue URL not ARN
 * AWS_DEFAULT_REGION -  no default, Region in which the resources exist
 
-7. Install CRD -   
+6. Install CRD -   
 ```
 make install
 ```
 
-8. Start the controller -   
+7. Start the controller -   
 ```
 make run
  ```
 
-9. Create CRD and deployment in multiple namespaces for testing -
+8. Create CRD and deployment in multiple namespaces for testing -
 * Scenario 1:-
   Create CRD in default namespace -
   ```
@@ -68,7 +51,7 @@ make run
 
   there will be no deployment called nginx in this namespace, so controller will try to find deployment name specified in CRD and fails to patch, and moves on
 
-10. Create PutSecretValue event -
+9. Create PutSecretValue event -
 ```
 aws secretsmanager put-secret-value --secret-id sqssecret --secret-string [{testsqssec:newsecret}]
 ```
